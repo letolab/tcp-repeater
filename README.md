@@ -7,9 +7,11 @@ Binary which listens on source host and copies all data to multiple destinations
 
 Run:
 
-`git clone https://github.com/letolab/tcp-repeater.git`
-`git clone cd tcp-repeater`
-`go build`
+```
+$ git clone https://github.com/letolab/tcp-repeater.git
+$ cd tcp-repeater
+$ go build
+```
 
 ## Usage
 
