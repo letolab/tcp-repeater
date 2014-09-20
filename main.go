@@ -23,8 +23,6 @@ func proxyConnection(conn net.Conn, destinations stringSlice) {
 
 	var upstreamConns []io.Writer
 
-	defer conn.Close()
-
 	for _, addr := range destinations {
 		forwardConn, err := net.Dial("tcp", addr)
 		if err != nil {
@@ -32,7 +30,6 @@ func proxyConnection(conn net.Conn, destinations stringSlice) {
 			continue
 		}
 		upstreamConns = append(upstreamConns, forwardConn)
-		defer forwardConn.Close()
 	}
 
 	if len(upstreamConns) == 0 {
@@ -41,21 +38,26 @@ func proxyConnection(conn net.Conn, destinations stringSlice) {
 	}
 
 	upstreamWriter := io.MultiWriter(upstreamConns...)
+	firstUpstreamCon := upstreamConns[0].(io.Reader)
 
-	n, err := io.Copy(upstreamWriter, conn)
-	if err != nil {
-		log.Println(err)
-		return
-	}
+	go func() {
+		n, err := io.Copy(upstreamWriter, conn)
+		if err != nil {
+			log.Println(err)
+			return
+		}
+		log.Printf("%d bytes copied from %s", n, conn.RemoteAddr().String())
+	}()
 
-	log.Printf("%d bytes copied\n", n)
-
-	err = conn.Close()
-	if err != nil {
-		log.Println(err)
-		return
-	}
-
+	go func() {
+		n, err := io.Copy(conn, firstUpstreamCon)
+		defer conn.Close()
+		if err != nil {
+			log.Println(err)
+			return
+		}
+		log.Printf("%d bytes copied to %s", n, conn.RemoteAddr().String())
+	}()
 }
 
 func main() {
