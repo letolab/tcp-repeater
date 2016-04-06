@@ -6,9 +6,12 @@ import (
 	"io"
 	"log"
 	"net"
+	"time"
 )
 
 type stringSlice []string
+
+var timeOutDuration time.Duration
 
 func (s *stringSlice) String() string {
 	return fmt.Sprintf("%v", *s)
@@ -24,7 +27,7 @@ func proxyConnection(conn net.Conn, destinations stringSlice) {
 	var upstreamConns []io.Writer
 
 	for _, addr := range destinations {
-		forwardConn, err := net.Dial("tcp", addr)
+		forwardConn, err := net.DialTimeout("tcp", addr, timeOutDuration)
 		if err != nil {
 			log.Println(err)
 			continue
@@ -66,6 +69,7 @@ func main() {
 
 	flag.StringVar(&source, "s", "", "Host to listen on")
 	flag.Var(&destinations, "d", "List of destination hosts")
+	flag.DurationVar(&timeOutDuration, "t", 250*time.Millisecond, "Timeout for connecting to the destination")
 	flag.Parse()
 
 	if flag.NFlag() < 2 {
